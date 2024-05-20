@@ -76,11 +76,18 @@ namespace Assets.Scripts
                 _gridMoveTimer -= _gridMoveTimerMax;
                 _gridPosition += _gridMoveDirection;
 
-                // Validate the grid position within the range of -width to width and -height to height
-                _gridPosition = new Vector2Int(
-                    Mathf.Clamp(_gridPosition.x, -_levelGrid.GetWidth(), _levelGrid.GetWidth()),
-                    Mathf.Clamp(_gridPosition.y, -_levelGrid.GetHeight(), _levelGrid.GetHeight())
-                );
+                if (_gridPosition.x < -_levelGrid.GetWidth() || _gridPosition.x > _levelGrid.GetWidth() ||
+                   _gridPosition.y < -_levelGrid.GetHeight() || _gridPosition.y > _levelGrid.GetHeight())
+                {
+                    Debug.Log("Game Over: Hit the wall");
+                    return;
+                }
+
+                if (IsPositionInBody(_gridPosition))
+                {
+                    Debug.Log("Game Over: Ate itself");
+                    return;
+                }
 
                 if (_levelGrid.TrySnakeEatFood(_gridPosition))
                 {
@@ -99,6 +106,18 @@ namespace Assets.Scripts
             snakeBodyGameObject.transform.localScale = this.transform.localScale;
             snakeBodyGameObject.transform.position = _snakeBodyTransformList.Count > 0 ? _snakeBodyTransformList[_snakeBodyTransformList.Count - 1].position : transform.position;
             _snakeBodyTransformList.Add(snakeBodyGameObject.transform);
+        }
+
+        private bool IsPositionInBody(Vector2Int position)
+        {
+            foreach (var bodyPart in _snakeBodyTransformList)
+            {
+                if (Vector2Int.RoundToInt(new Vector2(bodyPart.position.x, bodyPart.position.y)) == position)
+                {
+                    return true;
+                }
+            }
+            return false;
         }
 
         private void UpdateBodyPositions()
