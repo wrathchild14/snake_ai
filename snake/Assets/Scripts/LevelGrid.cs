@@ -1,51 +1,116 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
-public class LevelGrid
+namespace Assets.Scripts
 {
-    private Vector2Int foodGridPosition;
-    private GameObject foodGameObject;
-    private int width;
-    private int height;
-    private Snake snake;
-
-    public LevelGrid(int width, int height)
+    public class LevelGrid
     {
-        this.width = width;
-        this.height = height;
-    }
+        private Vector2Int _foodGridPosition;
+        private GameObject _foodGameObject;
+        private readonly int _width;
+        private readonly int _height;
+        private Snake _snake;
 
-    public void Setup(Snake snake)
-    {
-        this.snake = snake;
-        SpawnFood();
-
-    }
-
-    private void SpawnFood()
-    {
-        do
+        public LevelGrid(int width, int height)
         {
-            foodGridPosition = new Vector2Int(Random.Range(-width, width), Random.Range(-height, height));
+            _width = width;
+            _height = height;
         }
-        while (snake.GetFullSnakePositionList().IndexOf(foodGridPosition) != -1);
 
-        foodGameObject = new GameObject("Food", typeof(SpriteRenderer));
-        foodGameObject.GetComponent<SpriteRenderer>().sprite = GameAssets.instance.foodSprite;
-        foodGameObject.transform.position = new Vector3(foodGridPosition.x, foodGridPosition.y);
-    }
-    
-    public bool TrySnakeEatFood(Vector2Int snakeGridPosition)
-    {
-        if (snakeGridPosition == foodGridPosition)
+        public void Setup(Snake snake)
         {
-            Object.Destroy(foodGameObject);
-            Debug.Log("Wtf");
+            _snake = snake;
+            snake.Setup(this);
             SpawnFood();
-            return true;
+            CreateGridBorder();
         }
-        return false;
-    }
 
+        private void SpawnFood()
+        {
+            do
+            {
+                _foodGridPosition = new Vector2Int(Random.Range(-_width / 2, _width / 2), Random.Range(-_height / 2, _height / 2));
+            }
+            while (_snake.GetFullSnakePositionList().Contains(_foodGridPosition));
+
+            if (_foodGameObject != null)
+            {
+                Object.Destroy(_foodGameObject);
+            }
+
+            _foodGameObject = new GameObject("Food", typeof(SpriteRenderer));
+            _foodGameObject.GetComponent<SpriteRenderer>().sprite = GameAssets.instance.foodSprite;
+            _foodGameObject.transform.position = new Vector3(_foodGridPosition.x, _foodGridPosition.y);
+        }
+
+        public bool TrySnakeEatFood(Vector2Int snakeGridPosition)
+        {
+            if (snakeGridPosition == _foodGridPosition)
+            {
+                SpawnFood();
+                return true;
+            }
+            return false;
+        }
+
+        public Vector2Int ValidateGridPosition(Vector2Int gridPosition)
+        {
+            if (gridPosition.x < -_width / 2)
+            {
+                gridPosition.x = _width / 2;
+            }
+            else if (gridPosition.x > _width / 2)
+            {
+                gridPosition.x = -_width / 2;
+            }
+
+            if (gridPosition.y < -_height / 2)
+            {
+                gridPosition.y = _height / 2;
+            }
+            else if (gridPosition.y > _height / 2)
+            {
+                gridPosition.y = -_height / 2;
+            }
+
+            return gridPosition;
+        }
+
+        public int GetWidth()
+        {
+            return _width;
+        }
+
+        public int GetHeight()
+        {
+            return _height;
+        }
+
+        public void CreateGridBorder()
+        {
+            // top border
+            CreateBorder(new Vector2(0, _height + 2f), new Vector2(_width, 1));
+            // bottom border
+            CreateBorder(new Vector2(0, -_height - 2f), new Vector2(_width, 1));
+            // left border
+            CreateBorder(new Vector2(-_width - 2f, 0), new Vector2(1, _height));
+            // right border
+            CreateBorder(new Vector2(_width + 2f, 0), new Vector2(1, _height));
+        }
+
+        private void CreateBorder(Vector2 position, Vector2 size)
+        {
+            GameObject border = new GameObject("Border", typeof(SpriteRenderer), typeof(BoxCollider2D));
+            border.transform.position = position;
+            border.transform.localScale = size;
+
+            Texture2D texture = new Texture2D(256, 256);
+            texture.SetPixel(0, 0, Color.yellow);
+            texture.Apply();
+
+            Sprite sprite = Sprite.Create(texture, new Rect(0.0f, 0.0f, texture.width, texture.height), new Vector2(0.5f, 0.5f), 100.0f);
+            border.GetComponent<SpriteRenderer>().sprite = sprite;
+
+            border.GetComponent<BoxCollider2D>().isTrigger = true;
+        }
+    }
 }
