@@ -11,6 +11,9 @@ done = False
 
 while not done:
     decision_steps, terminal_steps = env.get_steps(behaviour_name)
+    print("Decision step rewards:", decision_steps.reward)
+    print("Terminal step rewards:", terminal_steps.reward)
+
     print(decision_steps.obs[0])
 
     if len(decision_steps) == 0:

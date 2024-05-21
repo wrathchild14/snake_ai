@@ -155,18 +155,21 @@ namespace Assets.Scripts.RL
                 if (_gridPosition.x < -_levelGrid.GetWidth() || _gridPosition.x > _levelGrid.GetWidth() ||
                    _gridPosition.y < -_levelGrid.GetHeight() || _gridPosition.y > _levelGrid.GetHeight())
                 {
+                    AddReward(-1f);
                     EndEpisode();
                     return;
                 }
 
                 if (IsPositionInBody(_gridPosition))
                 {
+                    AddReward(-1f);
                     EndEpisode();
                     return;
                 }
 
                 if (_levelGrid.TrySnakeEatFood(_gridPosition))
                 {
+                    AddReward(0.5f);
                     Grow();
                 }
 
