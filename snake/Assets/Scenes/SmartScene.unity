@@ -170,6 +170,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _snakePrefab: {fileID: 6939683638933632427, guid: b76737b626b87384c810ac7cbf6f62de, type: 3}
+  GridSizeX: 7
+  GridSizeY: 7
 --- !u!1 &172978451
 GameObject:
   m_ObjectHideFlags: 0

@@ -13,8 +13,8 @@ namespace Assets.Scripts.RL
             _snakePrefab = snakePrefab;
         }
 
-        [SerializeField] private const int GridSizeX = 20;
-        [SerializeField] private const int GridSizeY = 20;
+        [SerializeField] private int GridSizeX = 20;
+        [SerializeField] private int GridSizeY = 20;
 
         void Start()
         {

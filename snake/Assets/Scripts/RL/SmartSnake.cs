@@ -87,19 +87,19 @@ namespace Assets.Scripts.RL
         {
             sensor.AddObservation(_levelGrid.GetFoodPosition());
             sensor.AddObservation(_gridPosition);
-            sensor.AddObservation(_gridMoveDirection);
+            //sensor.AddObservation(_gridMoveDirection);
 
-            for (var i = 0; i < 10; i++)
-            {
-                if (i < _snakeBodyTransformList.Count)
-                {
-                    sensor.AddObservation(_snakeBodyTransformList[i].position);
-                }
-                else
-                {
-                    sensor.AddObservation(Vector3.zero); // add a default value for the remaining body parts
-                }
-            }
+            //for (var i = 0; i < 10; i++)
+            //{
+            //    if (i < _snakeBodyTransformList.Count)
+            //    {
+            //        sensor.AddObservation(_snakeBodyTransformList[i].position);
+            //    }
+            //    else
+            //    {
+            //        sensor.AddObservation(Vector3.zero); // add a default value for the remaining body parts
+            //    }
+            //}
         }
 
         private void Update()
@@ -146,6 +146,7 @@ namespace Assets.Scripts.RL
 
         private void HandleMovement()
         {
+            AddReward(-0.01f);
             _gridMoveTimer += Time.deltaTime;
             if (_gridMoveTimer >= _gridMoveTimerMax)
             {
@@ -169,7 +170,7 @@ namespace Assets.Scripts.RL
 
                 if (_levelGrid.TrySnakeEatFood(_gridPosition))
                 {
-                    AddReward(0.5f);
+                    AddReward(1f);
                     Grow();
                 }
 

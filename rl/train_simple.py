@@ -28,7 +28,7 @@ n_actions = spec.action_spec.discrete_branches[0]
 net = DQN(obs_size, n_actions)
 optimizer = torch.optim.Adam(net.parameters(), lr=0.01)
 
-epsilon = 0.2
+epsilon = 0.8
 num_episodes = 5  
 
 for episode in range(num_episodes):
@@ -37,10 +37,13 @@ for episode in range(num_episodes):
 
     for i in range(100):
         decision_steps, terminal_steps = env.get_steps(behaviour_name)
-
+        # print(decision_steps.reward, terminal_steps.reward)
+        action = spec.action_spec.random_action(1)
+        print(action.discrete)
+        print(decision_steps.obs[0][0])
         if len(decision_steps) == 0:
             break
-
+        
         state_v = torch.tensor(np.array(decision_steps.obs[0]))
         q_vals_v = net(state_v)
 
@@ -54,7 +57,6 @@ for episode in range(num_episodes):
 
         env.set_actions(behaviour_name, action_tuple)
         env.step()
-
         for agent_id in decision_steps:
             reward = decision_steps[agent_id].reward
             total_reward += reward

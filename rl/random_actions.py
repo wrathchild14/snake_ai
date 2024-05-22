@@ -21,7 +21,7 @@ while not done:
 
     tracked_agent = decision_steps.agent_id[0]
     action = spec.action_spec.random_action(len(decision_steps))
-    
+    print(action.discrete)
     env.set_actions(behaviour_name, action)
     env.step()
 
