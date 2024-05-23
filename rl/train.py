@@ -139,15 +139,16 @@ if __name__ == "__main__":
     GAMMA = 0.99
     EPS_START = 0.9
     EPS_END = 0.05
-    EPS_DECAY = 5_000
+    EPS_DECAY = 10_000
     TAU = 0.005
-    LR = 1e-4
+    LR = 1e-5
 
     SAVE_WEGHTS = True
+    LOAD_WEIGHTS = False
     steps_done = 0
-    STEPS = 100
+    STEPS = 500
 
-    env = UnityEnvironment(file_name="unity_builds/snake", seed=1, side_channels=[], no_graphics=False)
+    env = UnityEnvironment(file_name="unity_builds/snake", seed=1, side_channels=[], no_graphics=True)
     env.reset()
 
     behaviour_name = list(env.behavior_specs)[0]
@@ -159,7 +160,11 @@ if __name__ == "__main__":
     # n_observations = len(state)
     n_observations = spec.observation_specs[0].shape[0]
 
-    policy_net = DQN(n_observations, n_actions).to(device)
+    if LOAD_WEIGHTS:
+        policy_net = DQN(n_observations, n_actions).to(device)
+        policy_net.load_state_dict(torch.load('weights/policy_net.pth'))
+    else:
+        policy_net = DQN(n_observations, n_actions).to(device)
     target_net = DQN(n_observations, n_actions).to(device)
     target_net.load_state_dict(policy_net.state_dict())
 
@@ -169,12 +174,14 @@ if __name__ == "__main__":
     rewards = []
 
     if torch.cuda.is_available():
-        num_episodes = 1200
+        num_episodes = 4000
     else:
         num_episodes = 50
 
     pbar = tqdm(range(num_episodes))
     for i_episode in pbar:
+        if i_episode % 100 == 0:
+            print(f"Episode {i_episode}, avg reward: {np.mean(rewards[-100:]):.2f}, epsilon: {EPS_END + (EPS_START - EPS_END) * math.exp(-1. * steps_done / EPS_DECAY):.2f}")
         step_rewards = []
         # Initialize the environment and get its state
         env.reset()
@@ -182,9 +189,10 @@ if __name__ == "__main__":
         state = decision_steps.obs[0]
         state = torch.tensor(state, dtype=torch.float32, device=device).unsqueeze(0)
         # for t in range(STEPS):
-        t = 0
-        while True:
-            t += 1
+        # t = 0
+        # while True:
+        for t in range(STEPS):
+            # t += 1
             action = select_action(state)
             # action = action.unsqueeze(0)  # Ensure that action has shape [batch_size]
             action_tuple = ActionTuple()

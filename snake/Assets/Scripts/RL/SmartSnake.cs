@@ -48,6 +48,7 @@ namespace Assets.Scripts.RL
         public override void OnActionReceived(ActionBuffers actionBuffers)
         {
             int action = actionBuffers.DiscreteActions[0];
+            Vector2Int previousDirection = _gridMoveDirection;
 
             switch (action)
             {
@@ -89,17 +90,17 @@ namespace Assets.Scripts.RL
             sensor.AddObservation(_gridPosition);
             //sensor.AddObservation(_gridMoveDirection);
 
-            //for (var i = 0; i < 10; i++)
-            //{
-            //    if (i < _snakeBodyTransformList.Count)
-            //    {
-            //        sensor.AddObservation(_snakeBodyTransformList[i].position);
-            //    }
-            //    else
-            //    {
-            //        sensor.AddObservation(Vector3.zero); // add a default value for the remaining body parts
-            //    }
-            //}
+            for (var i = 0; i < 10; i++)
+            {
+               if (i < _snakeBodyTransformList.Count)
+               {
+                   sensor.AddObservation(_snakeBodyTransformList[i].position);
+               }
+               else
+               {
+                   sensor.AddObservation(Vector2.zero); // add a default value for the remaining body parts
+               }
+            }
         }
 
         private void Update()
@@ -146,7 +147,6 @@ namespace Assets.Scripts.RL
 
         private void HandleMovement()
         {
-            AddReward(-0.01f);
             _gridMoveTimer += Time.deltaTime;
             if (_gridMoveTimer >= _gridMoveTimerMax)
             {
@@ -173,6 +173,10 @@ namespace Assets.Scripts.RL
                     AddReward(1f);
                     Grow();
                 }
+                
+                //  else {
+                //     AddReward(-0.1f);
+                // }
 
                 UpdateBodyPositions();
                 transform.position = new Vector3(_gridPosition.x, _gridPosition.y);
