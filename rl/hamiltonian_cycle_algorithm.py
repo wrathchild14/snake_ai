@@ -28,30 +28,50 @@ def generate_valid_prims_edges(visited, rows, columns):
     return current_valid_edges
 
 
+def get_direction(node1, node2):
+    y1, x1 = node1
+    y2, x2 = node2
+    if y1 < y2:
+        return 3
+    elif y2 < y1:
+        return 1
+    elif x1 < x2:
+        return 2
+    elif x2 < x1:
+        return 0
+
+
 def prims_grid_algorithm(rows, columns):
     """
     generates minimum spanning tree for a grid of a size (rows, columns)
     """
-    # minimum_spanning_tree = [[0, 0, 0, 0] for _ in range(rows*columns)]
-    minimum_spanning_tree = []
+    minimum_spanning_tree = [[[0, 0, 0, 0] for _ in range(columns)] for _ in range(rows)]
+    minimum_spanning_edges = []
     queue = [(i, j) for i in range(rows) for j in range(columns)]
-    visited = [queue.pop(0)]
+    first_node = choice(queue)
+    queue.remove(first_node)
+    visited = [first_node]
 
     while len(queue) > 0:
         current_valid_edges = generate_valid_prims_edges(visited, rows, columns)
         current_edge = choice(current_valid_edges)
-        minimum_spanning_tree.append(current_edge)
-        visited.append(current_edge[1])
-        queue.remove(current_edge[1])
+        node, new_node = current_edge
+        visited.append(new_node)
+        queue.remove(new_node)
+
+        minimum_spanning_edges.append(current_edge)
+        directions = get_direction(node, new_node)
+        minimum_spanning_tree[node[0]][node[1]][directions] = 1
 
     return minimum_spanning_tree
 
 
-def hamiltonian_grid_cycle(n, m):
+def hamiltonian_grid_cycle(rows, columns):
     """
     generates a hamiltonian cycle for a grid of a size (rows, columns)
     """
-    pass
+    min_spanning_tree = prims_grid_algorithm(rows, columns)
+    print(min_spanning_tree)
 
 
-print(prims_grid_algorithm(2, 3))
+hamiltonian_grid_cycle(2, 3)
