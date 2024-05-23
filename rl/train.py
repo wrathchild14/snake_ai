@@ -143,6 +143,7 @@ if __name__ == "__main__":
     TAU = 0.005
     LR = 1e-4
 
+    SAVE_WEGHTS = True
     steps_done = 0
     STEPS = 100
 
@@ -168,7 +169,7 @@ if __name__ == "__main__":
     rewards = []
 
     if torch.cuda.is_available():
-        num_episodes = 600
+        num_episodes = 1200
     else:
         num_episodes = 50
 
@@ -249,6 +250,11 @@ if __name__ == "__main__":
         pbar.set_description(f"E {i_episode} done after {t + 1} t, with r: {ep_rewards:.2f}")
         rewards.append(ep_rewards)
 
+    if SAVE_WEGHTS:
+        torch.save(policy_net.state_dict(), 'weights/policy_net.pth')
+    
+    env.close()
+    
     plt.plot(rewards)
     plt.xlabel('Episode')
     plt.ylabel('Total Reward')
