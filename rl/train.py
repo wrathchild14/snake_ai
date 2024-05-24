@@ -1,7 +1,7 @@
 import math
 import random
+import time
 from collections import namedtuple, deque
-from itertools import count
 
 import torch
 import torch.nn as nn
@@ -43,7 +43,6 @@ def optimize_model():
     state_batch = state_batch.squeeze(1)
     state_action_values = policy_net(state_batch).gather(1, action_batch)
     # state_action_values = policy_net(state_batch).gather(1, action_batch.unsqueeze(-1))
-
 
     # Compute V(s_{t+1}) for all next states.
     # Expected values of actions for non_final_next_states are computed based
@@ -88,13 +87,12 @@ class ReplayMemory(object):
 
 
 class DQN(nn.Module):
-
-    def __init__(self, n_observations, n_actions):
+    def __init__(self, num_observations, num_actions):
         super(DQN, self).__init__()
-        self.layer1 = nn.Linear(n_observations, 64)
+        self.layer1 = nn.Linear(num_observations, 64)
         self.layer2 = nn.Linear(64, 128)
         self.layer3 = nn.Linear(128, 64)
-        self.layer4 = nn.Linear(64, n_actions)
+        self.layer4 = nn.Linear(64, num_actions)
 
     # Called with either one element to determine next action, or a batch
     # during optimization. Returns tensor([[left0exp,right0exp]...]).
@@ -105,25 +103,26 @@ class DQN(nn.Module):
         return self.layer4(x)
 
 
-def select_action(state):
+def select_action(state_in):
     global steps_done
     sample = random.random()
-    eps_threshold = EPS_END + (EPS_START - EPS_END) * \
-                    math.exp(-1. * steps_done / EPS_DECAY)
+    eps_threshold = EPS_END + (EPS_START - EPS_END) * math.exp(-1. * steps_done / EPS_DECAY)
     steps_done += 1
     if sample > eps_threshold:
         with torch.no_grad():
             # t.max(1) will return the largest column value of each row.
             # second column on max result is index of where max element was
             # found, so we pick action with the larger expected reward.
-            action = policy_net(state).max(2).indices.view(1, 1)
-            return action
+            action_out = policy_net(state_in).max(2).indices.view(1, 1)
+            return action_out
     else:
         return torch.tensor(spec.action_spec.random_action(1).discrete, device=device, dtype=torch.long)
 
 
 if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    timer_start = time.perf_counter()
 
     Transition = namedtuple('Transition',
                             ('state', 'action', 'next_state', 'reward'))
@@ -143,7 +142,7 @@ if __name__ == "__main__":
     TAU = 0.005
     LR = 1e-5
 
-    SAVE_WEGHTS = True
+    SAVE_WEIGHTS = True
     LOAD_WEIGHTS = False
     steps_done = 0
     STEPS = 500
@@ -170,18 +169,20 @@ if __name__ == "__main__":
 
     optimizer = optim.AdamW(policy_net.parameters(), lr=LR, amsgrad=True)
     memory = ReplayMemory(1000)
-    print(f"Initalized DQN with {n_observations} observations and {n_actions} actions")
+    print(f"Initialized DQN with {n_observations} observations and {n_actions} actions")
     rewards = []
 
     if torch.cuda.is_available():
-        num_episodes = 4000
+        num_episodes = 30
     else:
         num_episodes = 50
 
     pbar = tqdm(range(num_episodes))
     for i_episode in pbar:
-        if i_episode % 100 == 0:
-            print(f"Episode {i_episode}, avg reward: {np.mean(rewards[-100:]):.2f}, epsilon: {EPS_END + (EPS_START - EPS_END) * math.exp(-1. * steps_done / EPS_DECAY):.2f}")
+        if i_episode % 100 == 0 and i_episode != 0:
+            print(
+                f"Episode {i_episode}, avg reward: {np.mean(rewards[-100:]):.2f}, "
+                f"epsilon: {EPS_END + (EPS_START - EPS_END) * math.exp(-1. * steps_done / EPS_DECAY):.2f}")
         step_rewards = []
         # Initialize the environment and get its state
         env.reset()
@@ -189,14 +190,14 @@ if __name__ == "__main__":
         state = decision_steps.obs[0]
         state = torch.tensor(state, dtype=torch.float32, device=device).unsqueeze(0)
         # for t in range(STEPS):
-        # t = 0
+        t = 0
         # while True:
         for t in range(STEPS):
             # t += 1
             action = select_action(state)
             # action = action.unsqueeze(0)  # Ensure that action has shape [batch_size]
             action_tuple = ActionTuple()
-            # eww
+            # eww.
             # action_array = action.cpu().numpy()
             # if len(action_array) > 1:
             #     action_for_env = action_array[0]
@@ -206,9 +207,9 @@ if __name__ == "__main__":
             action_tuple.add_discrete(action.cpu().numpy())
             env.set_actions(behaviour_name, action_tuple)
             env.step()
-            
+
             assert action.shape[0] == state.shape[0]
-            
+
             decision_steps, terminal_steps = env.get_steps(behaviour_name)
             observation = decision_steps.obs[0]
             reward = np.zeros(state.shape[0])
@@ -217,7 +218,7 @@ if __name__ == "__main__":
             if len(terminal_steps.reward) > 0:
                 reward += terminal_steps.reward
             terminated = len(decision_steps) == 0
-            
+
             reward = np.repeat(reward, state.shape[0])
             assert len(reward) == state.shape[0] == action.shape[0]
 
@@ -254,15 +255,18 @@ if __name__ == "__main__":
             if done:
                 # episode_durations.append(t + 1)
                 break
+
         ep_rewards = sum(step_rewards)
         pbar.set_description(f"E {i_episode} done after {t + 1} t, with r: {ep_rewards:.2f}")
         rewards.append(ep_rewards)
 
-    if SAVE_WEGHTS:
+    if SAVE_WEIGHTS:
         torch.save(policy_net.state_dict(), 'weights/policy_net.pth')
-    
+
     env.close()
-    
+
+    print(f"Finished training in {(time.perf_counter() - timer_start)/60 :.3} minutes")
+
     plt.plot(rewards)
     plt.xlabel('Episode')
     plt.ylabel('Total Reward')
