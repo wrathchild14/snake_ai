@@ -53,7 +53,11 @@ def optimize_model():
 
     next_state_values = torch.zeros(BATCH_SIZE, device=device)
     with torch.no_grad():
-        next_state_values[non_final_mask] = target_net(non_final_next_states).max(1).values
+        if DOUBLE:
+            next_state_actions = policy_net(non_final_next_states).max(1)[1].unsqueeze(1)
+            next_state_values[non_final_mask] = target_net(non_final_next_states).gather(1, next_state_actions).squeeze(1)
+        else:
+            next_state_values[non_final_mask] = target_net(non_final_next_states).max(1).values
     # Compute the expected Q values
     # expected_state_action_values = (next_state_values * GAMMA) + reward_batch
     expected_state_action_values = ((next_state_values * GAMMA) + reward_batch).unsqueeze(1)
@@ -102,6 +106,32 @@ class DQN(nn.Module):
         x = F.relu(self.layer3(x))
         return self.layer4(x)
 
+class DuelingDQN(nn.Module):
+
+    def __init__(self, n_observations, n_actions):
+        super(DuelingDQN, self).__init__()
+        self.feature = nn.Sequential(
+            nn.Linear(n_observations, 128),
+            nn.ReLU()
+        )
+        
+        self.advantage = nn.Sequential(
+            nn.Linear(128, 128),
+            nn.ReLU(),
+            nn.Linear(128, n_actions)
+        )
+        
+        self.value = nn.Sequential(
+            nn.Linear(128, 128),
+            nn.ReLU(),
+            nn.Linear(128, 1)
+        )
+
+    def forward(self, x):
+        x = self.feature(x)
+        advantage = self.advantage(x)
+        value = self.value(x)
+        return value + advantage - advantage.mean()
 
 def select_action(state_in):
     global steps_done
@@ -136,18 +166,26 @@ if __name__ == "__main__":
     # LR is the learning rate of the ``AdamW`` optimizer
     BATCH_SIZE = 128
     GAMMA = 0.99
-    EPS_START = 0.9
+    EPS_START = 0.75
     EPS_END = 0.05
     EPS_DECAY = 10_000
     TAU = 0.005
-    LR = 1e-5
+    LR = 1e-4
 
     SAVE_WEIGHTS = True
-    LOAD_WEIGHTS = False
+    LOAD_WEIGHTS = True
     steps_done = 0
     STEPS = 500
+    DOUBLE = True
+    DUELING = True
+    GRAPHICS = False
 
-    env = UnityEnvironment(file_name="unity_builds/snake", seed=1, side_channels=[], no_graphics=True)
+    if torch.cuda.is_available():
+        num_episodes = 1000
+    else:
+        num_episodes = 50
+
+    env = UnityEnvironment(file_name="unity_builds/snake", seed=1, side_channels=[], no_graphics=not GRAPHICS)
     env.reset()
 
     behaviour_name = list(env.behavior_specs)[0]
@@ -159,23 +197,23 @@ if __name__ == "__main__":
     # n_observations = len(state)
     n_observations = spec.observation_specs[0].shape[0]
 
-    if LOAD_WEIGHTS:
-        policy_net = DQN(n_observations, n_actions).to(device)
-        policy_net.load_state_dict(torch.load('weights/policy_net.pth'))
+    if DUELING:
+        policy_net = DuelingDQN(n_observations, n_actions).to(device)
+        target_net = DuelingDQN(n_observations, n_actions).to(device)
     else:
         policy_net = DQN(n_observations, n_actions).to(device)
-    target_net = DQN(n_observations, n_actions).to(device)
+        target_net = DQN(n_observations, n_actions).to(device)
+
+    if LOAD_WEIGHTS:
+        policy_net.load_state_dict(torch.load('weights/policy_net.pth'))
+
     target_net.load_state_dict(policy_net.state_dict())
 
     optimizer = optim.AdamW(policy_net.parameters(), lr=LR, amsgrad=True)
-    memory = ReplayMemory(1000)
-    print(f"Initialized DQN with {n_observations} observations and {n_actions} actions")
+    memory = ReplayMemory(500)
+    print(f"Initalized DQN with {n_observations} observations and {n_actions} actions")
     rewards = []
 
-    if torch.cuda.is_available():
-        num_episodes = 30
-    else:
-        num_episodes = 50
 
     pbar = tqdm(range(num_episodes))
     for i_episode in pbar:
@@ -217,20 +255,18 @@ if __name__ == "__main__":
                 reward += decision_steps.reward
             if len(terminal_steps.reward) > 0:
                 reward += terminal_steps.reward
-            terminated = len(decision_steps) == 0
-
+            done = len(decision_steps) == 0
+            terminated = len(terminal_steps) > 0            
             reward = np.repeat(reward, state.shape[0])
             assert len(reward) == state.shape[0] == action.shape[0]
 
             # if t % 50 == 0:
             #     print(f"step: {t}, reward: {reward}, state: {state}, action: {action}, terminated: {terminated}")
-            # observation, reward, terminated, truncated, _ = env.step(action.item())
             reward = torch.tensor(reward, device=device)
             step_rewards.append(reward.item())
 
-            done = terminated  # or truncated
 
-            if terminated:
+            if done or terminated:
                 next_state = None
             else:
                 next_state = torch.tensor(observation, dtype=torch.float32, device=device).unsqueeze(0)
@@ -252,7 +288,7 @@ if __name__ == "__main__":
                 target_net_state_dict[key] = policy_net_state_dict[key] * TAU + target_net_state_dict[key] * (1 - TAU)
             target_net.load_state_dict(target_net_state_dict)
 
-            if done:
+            if terminated:
                 # episode_durations.append(t + 1)
                 break
 
@@ -265,7 +301,11 @@ if __name__ == "__main__":
 
     env.close()
 
+
     print(f"Finished training in {(time.perf_counter() - timer_start)/60 :.3} minutes")
+
+
+    plt.figure(figsize=(16, 5))
 
     plt.plot(rewards)
     plt.xlabel('Episode')
