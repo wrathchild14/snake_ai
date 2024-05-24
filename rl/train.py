@@ -12,6 +12,7 @@ from mlagents_envs.environment import UnityEnvironment
 from mlagents_envs.base_env import ActionTuple
 
 import numpy as np
+import pandas as pd
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 
@@ -166,9 +167,9 @@ if __name__ == "__main__":
     # LR is the learning rate of the ``AdamW`` optimizer
     BATCH_SIZE = 128
     GAMMA = 0.99
-    EPS_START = 0.75
+    EPS_START = 0.9
     EPS_END = 0.05
-    EPS_DECAY = 10_000
+    EPS_DECAY = 1_000_000
     TAU = 0.005
     LR = 1e-4
 
@@ -181,11 +182,11 @@ if __name__ == "__main__":
     GRAPHICS = False
 
     if torch.cuda.is_available():
-        num_episodes = 1000
+        num_episodes = 5000
     else:
         num_episodes = 50
 
-    env = UnityEnvironment(file_name="unity_builds/snake", seed=1, side_channels=[], no_graphics=not GRAPHICS)
+    env = UnityEnvironment(file_name="unity_builds/snake", seed=2, side_channels=[], no_graphics=not GRAPHICS)
     env.reset()
 
     behaviour_name = list(env.behavior_specs)[0]
@@ -206,14 +207,14 @@ if __name__ == "__main__":
 
     if LOAD_WEIGHTS:
         policy_net.load_state_dict(torch.load('weights/policy_net.pth'))
+        print("Loaded weights from file")
 
     target_net.load_state_dict(policy_net.state_dict())
 
     optimizer = optim.AdamW(policy_net.parameters(), lr=LR, amsgrad=True)
-    memory = ReplayMemory(500)
+    memory = ReplayMemory(1000)
     print(f"Initalized DQN with {n_observations} observations and {n_actions} actions")
     rewards = []
-
 
     pbar = tqdm(range(num_episodes))
     for i_episode in pbar:
@@ -221,6 +222,8 @@ if __name__ == "__main__":
             print(
                 f"Episode {i_episode}, avg reward: {np.mean(rewards[-100:]):.2f}, "
                 f"epsilon: {EPS_END + (EPS_START - EPS_END) * math.exp(-1. * steps_done / EPS_DECAY):.2f}")
+            torch.save(policy_net.state_dict(), 'weights/policy_net.pth')
+            print("Checkpoint: Saved weights to file")
         step_rewards = []
         # Initialize the environment and get its state
         env.reset()
@@ -256,12 +259,12 @@ if __name__ == "__main__":
             if len(terminal_steps.reward) > 0:
                 reward += terminal_steps.reward
             done = len(decision_steps) == 0
-            terminated = len(terminal_steps) > 0            
-            reward = np.repeat(reward, state.shape[0])
+            terminated = len(terminal_steps) > 0
+            # reward = np.repeat(reward, state.shape[0])
             assert len(reward) == state.shape[0] == action.shape[0]
 
             # if t % 50 == 0:
-            #     print(f"step: {t}, reward: {reward}, state: {state}, action: {action}, terminated: {terminated}")
+                # print(f"step: {t}, reward: {reward}, state: {state}, action: {action}")
             reward = torch.tensor(reward, device=device)
             step_rewards.append(reward.item())
 
@@ -288,8 +291,7 @@ if __name__ == "__main__":
                 target_net_state_dict[key] = policy_net_state_dict[key] * TAU + target_net_state_dict[key] * (1 - TAU)
             target_net.load_state_dict(target_net_state_dict)
 
-            if terminated:
-                # episode_durations.append(t + 1)
+            if terminated or done:
                 break
 
         ep_rewards = sum(step_rewards)
@@ -298,12 +300,11 @@ if __name__ == "__main__":
 
     if SAVE_WEIGHTS:
         torch.save(policy_net.state_dict(), 'weights/policy_net.pth')
+        rewards_df = pd.DataFrame(rewards, columns=['reward'])
+        rewards_df.to_csv('rewards.csv', index=False)
 
     env.close()
-
-
     print(f"Finished training in {(time.perf_counter() - timer_start)/60 :.3} minutes")
-
 
     plt.figure(figsize=(16, 5))
 
