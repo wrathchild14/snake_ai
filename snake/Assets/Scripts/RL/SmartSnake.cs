@@ -33,7 +33,15 @@ namespace Assets.Scripts.RL
         {
             ClearSnakeBody();
             _gridPosition = new Vector2Int(Random.Range(-_levelGrid.GetWidth(), _levelGrid.GetWidth()), Random.Range(-_levelGrid.GetHeight(), _levelGrid.GetHeight()));
-            _gridMoveDirection = new Vector2Int(Random.Range(-1, 2), Random.Range(-1, 2));
+            int direction = Random.Range(0, 2);
+            if (direction == 0)
+            {
+                _gridMoveDirection = new Vector2Int(Random.Range(-1, 2), 0);
+            }
+            else
+            {
+                _gridMoveDirection = new Vector2Int(0, Random.Range(-1, 2));
+            }
         }
 
         private void ClearSnakeBody()
@@ -48,21 +56,24 @@ namespace Assets.Scripts.RL
         public override void OnActionReceived(ActionBuffers actionBuffers)
         {
             int action = actionBuffers.DiscreteActions[0];
-            Vector2Int previousDirection = _gridMoveDirection;
 
             switch (action)
             {
                 case 0: // move up
-                    _gridMoveDirection = new Vector2Int(0, 1);
+                    if (_gridMoveDirection.y != -1)
+                        _gridMoveDirection = new Vector2Int(0, 1);
                     break;
                 case 1: // move down
-                    _gridMoveDirection = new Vector2Int(0, -1);
+                    if (_gridMoveDirection.y != 1)
+                        _gridMoveDirection = new Vector2Int(0, -1);
                     break;
                 case 2: // move left
-                    _gridMoveDirection = new Vector2Int(-1, 0);
+                    if (_gridMoveDirection.x != 1)
+                        _gridMoveDirection = new Vector2Int(-1, 0);
                     break;
                 case 3: // move right
-                    _gridMoveDirection = new Vector2Int(1, 0);
+                    if (_gridMoveDirection.x != -1)
+                        _gridMoveDirection = new Vector2Int(1, 0);
                     break;
             }
         }
@@ -86,26 +97,42 @@ namespace Assets.Scripts.RL
 
         public override void CollectObservations(VectorSensor sensor)
         {
-            sensor.AddObservation(_levelGrid.GetFoodPosition());
-            sensor.AddObservation(_gridPosition);
-            //sensor.AddObservation(_gridMoveDirection);
+            Vector2 normalizedFoodPosition = (_levelGrid.GetFoodPosition() + new Vector2(_levelGrid.GetWidth(), _levelGrid.GetHeight())) / new Vector2(_levelGrid.GetWidth() * 2, _levelGrid.GetHeight() * 2);
+            sensor.AddObservation(normalizedFoodPosition);
 
-            for (var i = 0; i < 10; i++)
+            Vector2 normalizedHeadPosition = (_gridPosition + new Vector2(_levelGrid.GetWidth(), _levelGrid.GetHeight())) / new Vector2(_levelGrid.GetWidth() * 2, _levelGrid.GetHeight() * 2);
+            sensor.AddObservation(normalizedHeadPosition);
+
+            sensor.AddObservation(IsObstacleInDirection(new Vector2Int(0, 1)));  // Up
+            sensor.AddObservation(IsObstacleInDirection(new Vector2Int(0, -1))); // Down
+            sensor.AddObservation(IsObstacleInDirection(new Vector2Int(-1, 0))); // Left
+            sensor.AddObservation(IsObstacleInDirection(new Vector2Int(1, 0)));  // Right
+        }
+
+        private bool IsObstacleInDirection(Vector2Int direction)
+        {
+            Vector2Int nextPosition = _gridPosition + direction;
+
+            // wall
+            if (nextPosition.x < -_levelGrid.GetWidth() || nextPosition.y < -_levelGrid.GetHeight() || nextPosition.x > _levelGrid.GetWidth() || nextPosition.y > _levelGrid.GetHeight())
             {
-               if (i < _snakeBodyTransformList.Count)
-               {
-                   sensor.AddObservation(_snakeBodyTransformList[i].position);
-               }
-               else
-               {
-                   sensor.AddObservation(Vector2.zero); // add a default value for the remaining body parts
-               }
+                return true;
             }
+
+            // snake body
+            foreach (Transform bodyPart in _snakeBodyTransformList)
+            {
+                if (Vector2Int.RoundToInt(bodyPart.position) == nextPosition)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private void Update()
         {
-            // HandleInput();
             HandleMovement();
         }
 
@@ -153,6 +180,8 @@ namespace Assets.Scripts.RL
                 _gridMoveTimer -= _gridMoveTimerMax;
                 _gridPosition += _gridMoveDirection;
 
+                AddReward(0.01f);
+
                 if (_gridPosition.x < -_levelGrid.GetWidth() || _gridPosition.x > _levelGrid.GetWidth() ||
                    _gridPosition.y < -_levelGrid.GetHeight() || _gridPosition.y > _levelGrid.GetHeight())
                 {
@@ -173,10 +202,9 @@ namespace Assets.Scripts.RL
                     AddReward(1f);
                     Grow();
                 }
-                
-                //  else {
-                //     AddReward(-0.1f);
-                // }
+                else {
+                    AddReward(-0.02f);
+                }
 
                 UpdateBodyPositions();
                 transform.position = new Vector3(_gridPosition.x, _gridPosition.y);

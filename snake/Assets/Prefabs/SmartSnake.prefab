@@ -100,7 +100,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_BrainParameters:
-    VectorObservationSize: 30
+    VectorObservationSize: 8
     NumStackedVectorObservations: 1
     m_ActionSpec:
       m_NumContinuousActions: 0
@@ -133,7 +133,7 @@ MonoBehaviour:
     maxStep: 0
   hasUpgradedFromAgentParameters: 1
   MaxStep: 0
-  _gridMoveTimerMax: 0.1
+  _gridMoveTimerMax: 0.05
 --- !u!114 &2123420667838687749
 MonoBehaviour:
   m_ObjectHideFlags: 0
