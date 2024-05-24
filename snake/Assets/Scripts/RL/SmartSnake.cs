@@ -103,6 +103,9 @@ namespace Assets.Scripts.RL
             Vector2 normalizedHeadPosition = (_gridPosition + new Vector2(_levelGrid.GetWidth(), _levelGrid.GetHeight())) / new Vector2(_levelGrid.GetWidth() * 2, _levelGrid.GetHeight() * 2);
             sensor.AddObservation(normalizedHeadPosition);
 
+            float distanceToFood = Vector2.Distance(normalizedHeadPosition, normalizedFoodPosition);
+            sensor.AddObservation(distanceToFood);
+
             sensor.AddObservation(IsObstacleInDirection(new Vector2Int(0, 1)));  // Up
             sensor.AddObservation(IsObstacleInDirection(new Vector2Int(0, -1))); // Down
             sensor.AddObservation(IsObstacleInDirection(new Vector2Int(-1, 0))); // Left
@@ -199,11 +202,8 @@ namespace Assets.Scripts.RL
 
                 if (_levelGrid.TrySnakeEatFood(_gridPosition))
                 {
-                    AddReward(1f);
+                    AddReward(2f);
                     Grow();
-                }
-                else {
-                    AddReward(-0.02f);
                 }
 
                 UpdateBodyPositions();
