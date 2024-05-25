@@ -215,11 +215,12 @@ namespace Assets.Scripts.RL
 
             if (_levelGrid.TrySnakeEatFood(_gridPosition))
             {
-                AddReward(2f);
+                AddReward(1f);
                 Grow();
-            } else {
-                AddReward(-0.01f);
-            }
+            } 
+            // else {
+            //     AddReward(-0.1f);
+            // }
 
             UpdateBodyPositions();
             transform.position = new Vector3(_gridPosition.x, _gridPosition.y);
