@@ -176,13 +176,16 @@ def generate_hamiltonian_path(directions):
 def hamiltonian_cycle_for_grid(rows, columns):
     """
     generates a hamiltonian cycle for a grid of a size (rows, columns)
+    rows and columns have to be divisible by 2, if not they will be rounded down
     """
-    min_spanning_tree = prims_algorithm_for_grid(rows, columns)
+    if rows < 4 or columns < 4:
+        raise ValueError("Can't divide an array that's smaller than 4x4 by 2")
+    min_spanning_tree = prims_algorithm_for_grid(int(rows/2), int(columns/2))
     mst_path, directions = traverse_grid(min_spanning_tree)
     hamiltonian_path = generate_hamiltonian_path(directions)
     return hamiltonian_path
 
 
 if __name__ == '__main__':
-    cycle = hamiltonian_cycle_for_grid(6, 6)
+    cycle = hamiltonian_cycle_for_grid(4, 4)
     print(cycle)
