@@ -14,6 +14,7 @@ namespace Assets.Scripts.RL
         [SerializeField] private float _gridMoveTimerMax = 0.1f;
         private SmartLevelGrid _levelGrid;
         private List<Transform> _snakeBodyTransformList;
+        [SerializeField] private bool _useRL = true;
 
         public void Setup(SmartLevelGrid levelGrid)
         {
@@ -110,6 +111,10 @@ namespace Assets.Scripts.RL
             sensor.AddObservation(IsObstacleInDirection(new Vector2Int(0, -1))); // Down
             sensor.AddObservation(IsObstacleInDirection(new Vector2Int(-1, 0))); // Left
             sensor.AddObservation(IsObstacleInDirection(new Vector2Int(1, 0)));  // Right
+
+            float distanceToNearestWall = CalculateDistanceToNearestWall();
+            float normalizedDistanceToNearestWall = distanceToNearestWall / (_levelGrid.GetWidth() + _levelGrid.GetHeight());
+            sensor.AddObservation(normalizedDistanceToNearestWall);
         }
 
         private bool IsObstacleInDirection(Vector2Int direction)
@@ -134,10 +139,25 @@ namespace Assets.Scripts.RL
             return false;
         }
 
-        private void Update()
+        private float CalculateDistanceToNearestWall()
+        {
+            float distanceToLeftWall = _gridPosition.x + _levelGrid.GetWidth();
+            float distanceToRightWall = _levelGrid.GetWidth() - _gridPosition.x;
+            float distanceToTopWall = _levelGrid.GetHeight() - _gridPosition.y;
+            float distanceToBottomWall = _gridPosition.y + _levelGrid.GetHeight();
+
+            return Mathf.Min(distanceToLeftWall, distanceToRightWall, distanceToTopWall, distanceToBottomWall);
+        }
+
+        private void FixedUpdate()
         {
             HandleMovement();
         }
+
+        // private void Update()
+        // {
+        //     HandleMovement();
+        // }
 
         private void HandleInput()
         {
@@ -175,39 +195,49 @@ namespace Assets.Scripts.RL
             }
         }
 
+        private void UpdateMovement() {
+            _gridPosition += _gridMoveDirection;
+
+            if (_gridPosition.x < -_levelGrid.GetWidth() || _gridPosition.x > _levelGrid.GetWidth() ||
+                _gridPosition.y < -_levelGrid.GetHeight() || _gridPosition.y > _levelGrid.GetHeight())
+            {
+                AddReward(-1f);
+                EndEpisode();
+                return;
+            }
+
+            if (IsPositionInBody(_gridPosition))
+            {
+                AddReward(-1f);
+                EndEpisode();
+                return;
+            }
+
+            if (_levelGrid.TrySnakeEatFood(_gridPosition))
+            {
+                AddReward(2f);
+                Grow();
+            } else {
+                AddReward(-0.01f);
+            }
+
+            UpdateBodyPositions();
+            transform.position = new Vector3(_gridPosition.x, _gridPosition.y);
+        }
+
         private void HandleMovement()
         {
-            _gridMoveTimer += Time.deltaTime;
-            if (_gridMoveTimer >= _gridMoveTimerMax)
+            if (_useRL)
             {
-                _gridMoveTimer -= _gridMoveTimerMax;
-                _gridPosition += _gridMoveDirection;
-
-                AddReward(0.01f);
-
-                if (_gridPosition.x < -_levelGrid.GetWidth() || _gridPosition.x > _levelGrid.GetWidth() ||
-                   _gridPosition.y < -_levelGrid.GetHeight() || _gridPosition.y > _levelGrid.GetHeight())
-                {
-                    AddReward(-1f);
-                    EndEpisode();
-                    return;
+                UpdateMovement();
+            }
+            else
+            {
+                _gridMoveTimer += Time.deltaTime;
+                if (_gridMoveTimer >= _gridMoveTimerMax) {
+                    _gridMoveTimer -= _gridMoveTimerMax;
+                    UpdateMovement();
                 }
-
-                if (IsPositionInBody(_gridPosition))
-                {
-                    AddReward(-1f);
-                    EndEpisode();
-                    return;
-                }
-
-                if (_levelGrid.TrySnakeEatFood(_gridPosition))
-                {
-                    AddReward(2f);
-                    Grow();
-                }
-
-                UpdateBodyPositions();
-                transform.position = new Vector3(_gridPosition.x, _gridPosition.y);
             }
         }
 
