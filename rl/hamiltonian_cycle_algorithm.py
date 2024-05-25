@@ -99,7 +99,7 @@ def traverse_grid(grid):
     current_node = [0, 0]
     mst_path = []
     directions = []
-    for _ in range(len(grid) * len(grid[0]) * 2 - 2):
+    for _ in range(len(grid) * len(grid[0]) * 2 - 1):
         mst_path.append(current_node)
         current_node_connections = grid[current_node[0]][current_node[1]]
         current_direction = turn_left(current_direction)
@@ -168,7 +168,9 @@ def generate_hamiltonian_path(directions):
         paths, current_node = get_path_between_nodes(current_node, current_direction, direction)
         current_direction = direction
         hamiltonian_path.extend(paths)
-    return hamiltonian_path
+
+    index_of_second_00 = hamiltonian_path[1:].index([0, 0])
+    return hamiltonian_path[:index_of_second_00 + 2]
 
 
 def hamiltonian_cycle_for_grid(rows, columns):
@@ -182,5 +184,5 @@ def hamiltonian_cycle_for_grid(rows, columns):
 
 
 if __name__ == '__main__':
-    cycle = hamiltonian_cycle_for_grid(2, 2)
+    cycle = hamiltonian_cycle_for_grid(6, 6)
     print(cycle)
