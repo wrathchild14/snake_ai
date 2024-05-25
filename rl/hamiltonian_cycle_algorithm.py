@@ -1,5 +1,11 @@
 from random import choice
 
+# Direction
+LEFT = [1, 0, 0, 0]
+UP = [0, 1, 0, 0]
+RIGHT = [0, 0, 1, 0]
+DOWN = [0, 0, 0, 1]
+
 
 def generate_valid_prims_edges(visited, rows, columns):
     current_valid_edges = []
@@ -60,10 +66,17 @@ def prims_grid_algorithm(rows, columns):
         queue.remove(new_node)
 
         minimum_spanning_edges.append(current_edge)
-        directions = get_direction(node, new_node)
-        minimum_spanning_tree[node[0]][node[1]][directions] = 1
+        directions1 = get_direction(node, new_node)
+        minimum_spanning_tree[node[0]][node[1]][directions1] = 1
+        directions2 = get_direction(new_node, node)
+        minimum_spanning_tree[new_node[0]][new_node[1]][directions2] = 1
 
     return minimum_spanning_tree
+
+
+def traverse_grid(grid):
+    current_direction = RIGHT
+    start_node = (0, 0)
 
 
 def hamiltonian_grid_cycle(rows, columns):
