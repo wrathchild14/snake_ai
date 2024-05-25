@@ -1,12 +1,9 @@
 import math
 import random
 import time
-from collections import namedtuple, deque
-
 import torch
-import torch.nn as nn
 import torch.optim as optim
-import torch.nn.functional as F
+
 
 from mlagents_envs.environment import UnityEnvironment
 from mlagents_envs.base_env import ActionTuple
@@ -15,124 +12,7 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 import matplotlib.pyplot as plt
-
-
-def optimize_model():
-    if len(memory) < BATCH_SIZE:
-        return
-    transitions = memory.sample(BATCH_SIZE)
-    # Transpose the batch (see https://stackoverflow.com/a/19343/3343043 for
-    # detailed explanation). This converts batch-array of Transitions
-    # to Transition of batch-arrays.
-    batch = Transition(*zip(*transitions))
-
-    # Compute a mask of non-final states and concatenate the batch elements
-    # (a final state would've been the one after which simulation ended)
-    non_final_mask = torch.tensor(tuple(map(lambda s: s is not None,
-                                            batch.next_state)), device=device, dtype=torch.bool)
-    non_final_next_states = torch.cat([s for s in batch.next_state
-                                       if s is not None])
-    state_batch = torch.cat(batch.state)
-    action_batch = torch.cat(batch.action)
-    reward_batch = torch.cat(batch.reward)
-
-    # Compute Q(s_t, a) - the model computes Q(s_t), then we select the
-    # columns of actions taken. These are the actions which would've been taken
-    # for each batch state according to policy_net
-    # print(state_batch.size())
-    # print(action_batch.size())
-    state_batch = state_batch.squeeze(1)
-    state_action_values = policy_net(state_batch).gather(1, action_batch)
-    # state_action_values = policy_net(state_batch).gather(1, action_batch.unsqueeze(-1))
-
-    # Compute V(s_{t+1}) for all next states.
-    # Expected values of actions for non_final_next_states are computed based
-    # on the "older" target_net; selecting their best reward with max(1).values
-    # This is merged based on the mask, such that we'll have either the expected
-    # state value or 0 in case the state was final.
-    non_final_next_states = non_final_next_states.squeeze(1)
-
-    next_state_values = torch.zeros(BATCH_SIZE, device=device)
-    with torch.no_grad():
-        if DOUBLE:
-            next_state_actions = policy_net(non_final_next_states).max(1)[1].unsqueeze(1)
-            next_state_values[non_final_mask] = target_net(non_final_next_states).gather(1, next_state_actions).squeeze(1)
-        else:
-            next_state_values[non_final_mask] = target_net(non_final_next_states).max(1).values
-    # Compute the expected Q values
-    # expected_state_action_values = (next_state_values * GAMMA) + reward_batch
-    expected_state_action_values = ((next_state_values * GAMMA) + reward_batch).unsqueeze(1)
-
-    # Compute Huber loss
-    criterion = nn.SmoothL1Loss()
-    loss = criterion(state_action_values, expected_state_action_values)
-
-    # Optimize the model
-    optimizer.zero_grad()
-    loss.backward()
-    # In-place gradient clipping
-    torch.nn.utils.clip_grad_value_(policy_net.parameters(), 100)
-    optimizer.step()
-
-
-class ReplayMemory(object):
-
-    def __init__(self, capacity):
-        self.memory = deque([], maxlen=capacity)
-
-    def push(self, *args):
-        """Save a transition"""
-        self.memory.append(Transition(*args))
-
-    def sample(self, batch_size):
-        return random.sample(self.memory, batch_size)
-
-    def __len__(self):
-        return len(self.memory)
-
-
-class DQN(nn.Module):
-    def __init__(self, num_observations, num_actions):
-        super(DQN, self).__init__()
-        self.layer1 = nn.Linear(num_observations, 64)
-        self.layer2 = nn.Linear(64, 128)
-        self.layer3 = nn.Linear(128, 64)
-        self.layer4 = nn.Linear(64, num_actions)
-
-    # Called with either one element to determine next action, or a batch
-    # during optimization. Returns tensor([[left0exp,right0exp]...]).
-    def forward(self, x):
-        x = F.relu(self.layer1(x))
-        x = F.relu(self.layer2(x))
-        x = F.relu(self.layer3(x))
-        return self.layer4(x)
-
-class DuelingDQN(nn.Module):
-
-    def __init__(self, n_observations, n_actions):
-        super(DuelingDQN, self).__init__()
-        self.feature = nn.Sequential(
-            nn.Linear(n_observations, 128),
-            nn.ReLU()
-        )
-        
-        self.advantage = nn.Sequential(
-            nn.Linear(128, 128),
-            nn.ReLU(),
-            nn.Linear(128, n_actions)
-        )
-        
-        self.value = nn.Sequential(
-            nn.Linear(128, 128),
-            nn.ReLU(),
-            nn.Linear(128, 1)
-        )
-
-    def forward(self, x):
-        x = self.feature(x)
-        advantage = self.advantage(x)
-        value = self.value(x)
-        return value + advantage - advantage.mean()
+from models import DQN, DuelingDQN, ReplayMemory, optimize_model
 
 def select_action(state_in):
     global steps_done
@@ -144,7 +24,7 @@ def select_action(state_in):
             # t.max(1) will return the largest column value of each row.
             # second column on max result is index of where max element was
             # found, so we pick action with the larger expected reward.
-            action_out = policy_net(state_in).max(2).indices.view(1, 1)
+            action_out = policy_net(state_in).max(1).indices.view(1, 1)
             return action_out
     else:
         return torch.tensor(spec.action_spec.random_action(1).discrete, device=device, dtype=torch.long)
@@ -154,10 +34,6 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     timer_start = time.perf_counter()
-
-    Transition = namedtuple('Transition',
-                            ('state', 'action', 'next_state', 'reward'))
-
     # BATCH_SIZE is the number of transitions sampled from the replay buffer
     # GAMMA is the discount factor as mentioned in the previous section
     # EPS_START is the starting value of epsilon
@@ -168,21 +44,21 @@ if __name__ == "__main__":
     BATCH_SIZE = 128
     GAMMA = 0.99
     EPS_START = 0.9
-    EPS_END = 0.05
-    EPS_DECAY = 1_000_000
+    EPS_END = 0.1
+    EPS_DECAY = 10_000
     TAU = 0.005
     LR = 1e-4
 
     SAVE_WEIGHTS = True
     LOAD_WEIGHTS = True
     steps_done = 0
-    STEPS = 500
-    DOUBLE = True
-    DUELING = True
+    STEPS = 250
+    DOUBLE = False
+    DUELING = False
     GRAPHICS = False
 
     if torch.cuda.is_available():
-        num_episodes = 5000
+        num_episodes = 1000
     else:
         num_episodes = 50
 
@@ -215,6 +91,7 @@ if __name__ == "__main__":
     memory = ReplayMemory(1000)
     print(f"Initalized DQN with {n_observations} observations and {n_actions} actions")
     rewards = []
+    losses = []
 
     pbar = tqdm(range(num_episodes))
     for i_episode in pbar:
@@ -225,26 +102,16 @@ if __name__ == "__main__":
             torch.save(policy_net.state_dict(), 'weights/policy_net.pth')
             print("Checkpoint: Saved weights to file")
         step_rewards = []
+        step_losses = []
         # Initialize the environment and get its state
         env.reset()
         decision_steps, terminal_steps = env.get_steps(behaviour_name)
         state = decision_steps.obs[0]
-        state = torch.tensor(state, dtype=torch.float32, device=device).unsqueeze(0)
-        # for t in range(STEPS):
-        t = 0
-        # while True:
+        state = torch.tensor(state, dtype=torch.float32, device=device)
         for t in range(STEPS):
-            # t += 1
+            # time.sleep(1)
             action = select_action(state)
-            # action = action.unsqueeze(0)  # Ensure that action has shape [batch_size]
             action_tuple = ActionTuple()
-            # eww.
-            # action_array = action.cpu().numpy()
-            # if len(action_array) > 1:
-            #     action_for_env = action_array[0]
-            # else:
-            #     action_for_env = action_array
-            # action_tuple.add_discrete(action_for_env.reshape(-1, 1))
             action_tuple.add_discrete(action.cpu().numpy())
             env.set_actions(behaviour_name, action_tuple)
             env.step()
@@ -260,11 +127,11 @@ if __name__ == "__main__":
                 reward += terminal_steps.reward
             done = len(decision_steps) == 0
             terminated = len(terminal_steps) > 0
-            # reward = np.repeat(reward, state.shape[0])
+            # print(observation, reward, done, terminated, action)
             assert len(reward) == state.shape[0] == action.shape[0]
 
             # if t % 50 == 0:
-                # print(f"step: {t}, reward: {reward}, state: {state}, action: {action}")
+            #     print(f"step: {t}, reward: {reward}, state: {state}, action: {action}")
             reward = torch.tensor(reward, device=device)
             step_rewards.append(reward.item())
 
@@ -272,7 +139,7 @@ if __name__ == "__main__":
             if done or terminated:
                 next_state = None
             else:
-                next_state = torch.tensor(observation, dtype=torch.float32, device=device).unsqueeze(0)
+                next_state = torch.tensor(observation, dtype=torch.float32, device=device)
 
             # Store the transition in memory
             memory.push(state, action, next_state, reward)
@@ -281,7 +148,9 @@ if __name__ == "__main__":
             state = next_state
 
             # Perform one step of the optimization (on the policy network)
-            optimize_model()
+            loss = optimize_model(memory, policy_net, target_net, optimizer, device, double=DOUBLE, BATCH_SIZE=BATCH_SIZE, GAMMA=GAMMA)
+            if loss is not None:
+                step_losses.append(loss)
 
             # Soft update of the target network's weights
             # θ′ ← τ θ + (1 −τ )θ′
@@ -293,23 +162,34 @@ if __name__ == "__main__":
 
             if terminated or done:
                 break
-
+        
+        if len(step_losses) == 0:
+            step_losses.append(0)
+        losses.append(np.mean(step_losses))
         ep_rewards = sum(step_rewards)
-        pbar.set_description(f"E {i_episode} done after {t + 1} t, with r: {ep_rewards:.2f}")
+        pbar.set_description(f"E {i_episode} done after {t + 1} t, with r: {ep_rewards:.2f} and l: {np.mean(step_losses):.2f}")
         rewards.append(ep_rewards)
 
     if SAVE_WEIGHTS:
         torch.save(policy_net.state_dict(), 'weights/policy_net.pth')
         rewards_df = pd.DataFrame(rewards, columns=['reward'])
         rewards_df.to_csv('rewards.csv', index=False)
+        losses_df = pd.DataFrame(losses, columns=['loss'])
+        losses_df.to_csv('losses.csv', index=False)
 
     env.close()
     print(f"Finished training in {(time.perf_counter() - timer_start)/60 :.3} minutes")
 
     plt.figure(figsize=(16, 5))
-
     plt.plot(rewards)
     plt.xlabel('Episode')
     plt.ylabel('Total Reward')
     plt.title('Rewards over Episodes')
+    plt.show()
+
+    plt.figure(figsize=(16, 5))
+    plt.plot(losses)
+    plt.xlabel('Episode')
+    plt.ylabel('Loss')
+    plt.title('Loss over Episodes')
     plt.show()
