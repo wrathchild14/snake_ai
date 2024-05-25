@@ -43,6 +43,7 @@ namespace Assets.Scripts.RL
             {
                 _gridMoveDirection = new Vector2Int(0, Random.Range(-1, 2));
             }
+            _levelGrid.SpawnFood();
         }
 
         private void ClearSnakeBody()

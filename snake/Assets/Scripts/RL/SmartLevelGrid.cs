@@ -24,7 +24,7 @@ namespace Assets.Scripts.RL
             CreateGridBorder();
         }
 
-        private void SpawnFood()
+        public void SpawnFood()
         {
             do
             {
