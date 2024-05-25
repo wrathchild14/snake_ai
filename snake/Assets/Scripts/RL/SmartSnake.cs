@@ -105,39 +105,54 @@ namespace Assets.Scripts.RL
             Vector2 normalizedHeadPosition = (_gridPosition + new Vector2(_levelGrid.GetWidth(), _levelGrid.GetHeight())) / new Vector2(_levelGrid.GetWidth() * 2, _levelGrid.GetHeight() * 2);
             sensor.AddObservation(normalizedHeadPosition);
 
-            float distanceToFood = Vector2.Distance(normalizedHeadPosition, normalizedFoodPosition);
-            sensor.AddObservation(distanceToFood);
+            float averageSizeGrid = _levelGrid.GetWidth() + _levelGrid.GetHeight();
 
-            sensor.AddObservation(IsObstacleInDirection(new Vector2Int(0, 1)));  // Up
-            sensor.AddObservation(IsObstacleInDirection(new Vector2Int(0, -1))); // Down
-            sensor.AddObservation(IsObstacleInDirection(new Vector2Int(-1, 0))); // Left
-            sensor.AddObservation(IsObstacleInDirection(new Vector2Int(1, 0)));  // Right
+            float distanceToObstacleUp = DistanceToObstacleInDirection(new Vector2Int(0, 1));
+            // float normalizedDistanceToObstacleUp = (distanceToObstacleUp + averageSizeGrid) / (_levelGrid.GetWidth() * 2 + _levelGrid.GetHeight() * 2);
+            float normalizedDistanceToObstacleUp = distanceToObstacleUp / averageSizeGrid;
+            sensor.AddObservation(normalizedDistanceToObstacleUp);
 
-            float distanceToNearestWall = CalculateDistanceToNearestWall();
-            float normalizedDistanceToNearestWall = distanceToNearestWall / (_levelGrid.GetWidth() + _levelGrid.GetHeight());
-            sensor.AddObservation(normalizedDistanceToNearestWall);
+            float distanceToObstacleDown = DistanceToObstacleInDirection(new Vector2Int(0, -1));
+            // float normalizedDistanceToObstacleDown = (distanceToObstacleDown + averageSizeGrid) / (_levelGrid.GetWidth() * 2 + _levelGrid.GetHeight() * 2);
+            float normalizedDistanceToObstacleDown = distanceToObstacleDown / averageSizeGrid;
+            sensor.AddObservation(normalizedDistanceToObstacleDown);
+
+            float distanceToObstacleLeft = DistanceToObstacleInDirection(new Vector2Int(-1, 0));
+            // float normalizedDistanceToObstacleLeft = (distanceToObstacleLeft + averageSizeGrid) / (_levelGrid.GetWidth() * 2 + _levelGrid.GetHeight() * 2);
+            float normalizedDistanceToObstacleLeft = distanceToObstacleLeft / averageSizeGrid;
+            sensor.AddObservation(normalizedDistanceToObstacleLeft);
+
+            float distanceToObstacleRight = DistanceToObstacleInDirection(new Vector2Int(1, 0));
+            // float normalizedDistanceToObstacleRight = (distanceToObstacleRight + averageSizeGrid) / (_levelGrid.GetWidth() * 2 + _levelGrid.GetHeight() * 2);
+            float normalizedDistanceToObstacleRight = distanceToObstacleRight / averageSizeGrid;
+            sensor.AddObservation(normalizedDistanceToObstacleRight);
         }
 
-        private bool IsObstacleInDirection(Vector2Int direction)
+        private float DistanceToObstacleInDirection(Vector2Int direction)
         {
-            Vector2Int nextPosition = _gridPosition + direction;
+            Vector2Int nextPosition = _gridPosition;
+            float distance = 0;
 
-            // wall
-            if (nextPosition.x < -_levelGrid.GetWidth() || nextPosition.y < -_levelGrid.GetHeight() || nextPosition.x > _levelGrid.GetWidth() || nextPosition.y > _levelGrid.GetHeight())
+            while (true)
             {
-                return true;
-            }
+                nextPosition += direction;
+                distance++;
 
-            // snake body
-            foreach (Transform bodyPart in _snakeBodyTransformList)
-            {
-                if (Vector2Int.RoundToInt(bodyPart.position) == nextPosition)
+                // wall
+                if (nextPosition.x < -_levelGrid.GetWidth() || nextPosition.y < -_levelGrid.GetHeight() || nextPosition.x > _levelGrid.GetWidth() || nextPosition.y > _levelGrid.GetHeight())
                 {
-                    return true;
+                    return distance;
+                }
+
+                // snake body
+                foreach (Transform bodyPart in _snakeBodyTransformList)
+                {
+                    if (Vector2Int.RoundToInt(bodyPart.position) == nextPosition)
+                    {
+                        return distance;
+                    }
                 }
             }
-
-            return false;
         }
 
         private float CalculateDistanceToNearestWall()
@@ -197,6 +212,7 @@ namespace Assets.Scripts.RL
         }
 
         private void UpdateMovement() {
+            AddReward(0.01f);
             _gridPosition += _gridMoveDirection;
 
             if (_gridPosition.x < -_levelGrid.GetWidth() || _gridPosition.x > _levelGrid.GetWidth() ||
