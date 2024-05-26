@@ -1,6 +1,9 @@
+# A program for finding a random hamiltonian cycle for a grid of n x m size
+# Uses Prims algorithm to generate a random span tree of half the size -> n and m have to be dividable by 2
+# Rok Nikolič 2024
+
 from random import choice
 
-# Direction
 LEFT = 0
 UP = 1
 RIGHT = 2
@@ -8,6 +11,9 @@ DOWN = 3
 
 
 def generate_valid_prims_edges(visited, rows, columns):
+    """
+    Generates all edges from all visited nodes to all unvisited nodes
+    """
     current_valid_edges = []
     for node in visited:
         # Left
@@ -98,25 +104,28 @@ def traverse_grid(grid):
     current_direction = RIGHT
     current_node = [0, 0]
     mst_path = []
-    directions = []
+    directions_between_nodes = []
     for _ in range(len(grid) * len(grid[0]) * 2 - 1):
         mst_path.append(current_node)
         current_node_connections = grid[current_node[0]][current_node[1]]
         current_direction = turn_left(current_direction)
         if current_direction in current_node_connections:
             current_node = get_next_node(current_node, current_direction)
-            directions.append(current_direction)
+            directions_between_nodes.append(current_direction)
         else:
             for i in range(3):
                 current_direction = get_next_direction(current_direction)
                 if current_direction in current_node_connections:
                     current_node = get_next_node(current_node, current_direction)
-                    directions.append(current_direction)
+                    directions_between_nodes.append(current_direction)
                     break
-    return mst_path, directions
+    return mst_path, directions_between_nodes
 
 
-def get_path_between_nodes(current_node, direction1, direction2):
+def get_left_path_for_node(current_node, direction1, direction2):
+    """
+    generates a left wall hugging path for a node if given the directions of travel into and out of the node
+    """
     y, x = current_node
     path = []
     # First LEFT
@@ -165,7 +174,7 @@ def generate_hamiltonian_path(directions):
     current_node = [0, 0]
     hamiltonian_path = [current_node]
     for direction in directions:
-        paths, current_node = get_path_between_nodes(current_node, current_direction, direction)
+        paths, current_node = get_left_path_for_node(current_node, current_direction, direction)
         current_direction = direction
         hamiltonian_path.extend(paths)
 
@@ -173,14 +182,21 @@ def generate_hamiltonian_path(directions):
     return hamiltonian_path[:index_of_second_00 + 2]
 
 
-def hamiltonian_cycle_for_grid(rows, columns):
+def hamiltonian_cycle_for_grid(n=4, m=4):
     """
-    generates a hamiltonian cycle for a grid of a size (rows, columns)
-    rows and columns have to be divisible by 2, if not they will be rounded down
+    Generates a hamiltonian cycle for a grid of a size (rows, columns) by using Prims algorithm to find
+    a minimum span tree of half the size and then walk it to create the cycle.
+    Rows and columns have to be divisible by 2, if not they will be rounded down
+    :param n: number of rows
+    :param m: number of columns
+    :return: hamiltonian cycle represented by a path of (y, x) coordinate pairs
     """
-    if rows < 4 or columns < 4:
+    if n < 4 or m < 4:
         raise ValueError("Can't divide an array that's smaller than 4x4 by 2")
-    min_spanning_tree = prims_algorithm_for_grid(int(rows/2), int(columns/2))
+    rows, columns = int(n/2), int(m/2)
+    print(f"Generating hamiltonian cycle with size: {rows * 2}x{columns * 2}")
+
+    min_spanning_tree = prims_algorithm_for_grid(rows, columns)
     mst_path, directions = traverse_grid(min_spanning_tree)
     hamiltonian_path = generate_hamiltonian_path(directions)
     return hamiltonian_path
