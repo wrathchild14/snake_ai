@@ -78,8 +78,6 @@ namespace Assets.Scripts.RL
                     _gridMoveDirection = new Vector2Int(1, 0);
                     break;
             }
-
-           
         }
 
         public override void Heuristic(in ActionBuffers actionsOut)
@@ -107,10 +105,18 @@ namespace Assets.Scripts.RL
             Vector2 normalizedFoodPosition = (_levelGrid.GetFoodPosition() + new Vector2(_levelGrid.GetWidth(), _levelGrid.GetHeight())) / new Vector2((float)_levelGrid.GetWidth() * 2, (float)_levelGrid.GetHeight() * 2);
             sensor.AddObservation(normalizedFoodPosition);
 
-            sensor.AddObservation(IsObstacleInDirection(new Vector2Int(0, 1)));  // Up
-            sensor.AddObservation(IsObstacleInDirection(new Vector2Int(0, -1))); // Down
-            sensor.AddObservation(IsObstacleInDirection(new Vector2Int(-1, 0))); // Left
-            sensor.AddObservation(IsObstacleInDirection(new Vector2Int(1, 0)));  // Right
+            for (int dx = -2; dx <= 2; dx++)
+            {
+                for (int dy = -2; dy <= 2; dy++)
+                {
+                    sensor.AddObservation(IsObstacleInDirection(new Vector2Int(dx, dy)));
+                }
+            }
+
+            // sensor.AddObservation(IsObstacleInDirection(new Vector2Int(0, 1)));  // Up
+            // sensor.AddObservation(IsObstacleInDirection(new Vector2Int(0, -1))); // Down
+            // sensor.AddObservation(IsObstacleInDirection(new Vector2Int(-1, 0))); // Left
+            // sensor.AddObservation(IsObstacleInDirection(new Vector2Int(1, 0)));  // Right
 
             // foreach (var bodyPart in _snakeBodyTransformList)
             // {
