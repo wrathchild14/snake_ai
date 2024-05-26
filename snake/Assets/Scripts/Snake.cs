@@ -124,13 +124,13 @@ namespace Assets.Scripts
         {
             if (_snakeBodyTransformList.Count == 0) return;
 
-            // Move last body part to where the head was
+            // move last body part to where the head was
             for (var i = _snakeBodyTransformList.Count - 1; i > 0; i--)
             {
                 _snakeBodyTransformList[i].position = _snakeBodyTransformList[i - 1].position;
             }
 
-            // First body part moves to where the head was
+            // first body part moves to where the head was
             _snakeBodyTransformList[0].position = transform.position;
         }
 

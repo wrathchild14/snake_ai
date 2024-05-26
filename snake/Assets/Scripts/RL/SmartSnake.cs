@@ -62,19 +62,15 @@ namespace Assets.Scripts.RL
             switch (action)
             {
                 case 0: // move up
-                    // if (_gridMoveDirection.y != -1)
                     _gridMoveDirection = new Vector2Int(0, 1);
                     break;
                 case 1: // move down
-                    // if (_gridMoveDirection.y != 1)
                     _gridMoveDirection = new Vector2Int(0, -1);
                     break;
                 case 2: // move left
-                    // if (_gridMoveDirection.x != 1)
                     _gridMoveDirection = new Vector2Int(-1, 0);
                     break;
                 case 3: // move right
-                    // if (_gridMoveDirection.x != -1)
                     _gridMoveDirection = new Vector2Int(1, 0);
                     break;
             }
@@ -113,18 +109,11 @@ namespace Assets.Scripts.RL
                 }
             }
 
-            // sensor.AddObservation(IsObstacleInDirection(new Vector2Int(0, 1)));  // Up
-            // sensor.AddObservation(IsObstacleInDirection(new Vector2Int(0, -1))); // Down
-            // sensor.AddObservation(IsObstacleInDirection(new Vector2Int(-1, 0))); // Left
-            // sensor.AddObservation(IsObstacleInDirection(new Vector2Int(1, 0)));  // Right
-
             // foreach (var bodyPart in _snakeBodyTransformList)
             // {
             //     Vector2 normalizedBodyPosition = (Vector2Int.RoundToInt(new Vector2(bodyPart.position.x, bodyPart.position.y)) + new Vector2(_levelGrid.GetWidth(), _levelGrid.GetHeight())) / new Vector2((float)_levelGrid.GetWidth() * 2, (float)_levelGrid.GetHeight() * 2);
             //     sensor.AddObservation(normalizedBodyPosition);
             // }
-
-
 
             // float averageSizeGrid = _levelGrid.GetWidth() + _levelGrid.GetHeight();
 
@@ -147,8 +136,6 @@ namespace Assets.Scripts.RL
             // // float normalizedDistanceToObstacleRight = (distanceToObstacleRight + averageSizeGrid) / (_levelGrid.GetWidth() * 2 + _levelGrid.GetHeight() * 2);
             // // float normalizedDistanceToObstacleRight = distanceToObstacleRight / averageSizeGrid;
             // sensor.AddObservation(distanceToObstacleRight);
-
-
         }
 
         private bool IsObstacleInDirection(Vector2Int direction)
@@ -291,9 +278,6 @@ namespace Assets.Scripts.RL
                 AddReward(1f);
                 Grow();
             } 
-            // else {
-            //     AddReward(-0.1f);
-            // }
 
             UpdateBodyPositions();
             transform.position = new Vector3(_gridPosition.x, _gridPosition.y);
@@ -340,13 +324,13 @@ namespace Assets.Scripts.RL
         {
             if (_snakeBodyTransformList.Count == 0) return;
 
-            // Move last body part to where the head was
+            // move last body part to where the head was
             for (var i = _snakeBodyTransformList.Count - 1; i > 0; i--)
             {
                 _snakeBodyTransformList[i].position = _snakeBodyTransformList[i - 1].position;
             }
 
-            // First body part moves to where the head was
+            // first body part moves to where the head was
             _snakeBodyTransformList[0].position = transform.position;
         }
 
