@@ -4,7 +4,6 @@ import time
 import torch
 import torch.optim as optim
 
-
 from mlagents_envs.environment import UnityEnvironment
 from mlagents_envs.base_env import ActionTuple
 
@@ -21,9 +20,6 @@ def select_action(state_in):
     steps_done += 1
     if sample > eps_threshold:
         with torch.no_grad():
-            # t.max(1) will return the largest column value of each row.
-            # second column on max result is index of where max element was
-            # found, so we pick action with the larger expected reward.
             action_out = policy_net(state_in).max(1).indices.view(1, 1)
             return action_out
     else:
@@ -34,13 +30,6 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     timer_start = time.perf_counter()
-    # BATCH_SIZE is the number of transitions sampled from the replay buffer
-    # GAMMA is the discount factor as mentioned in the previous section
-    # EPS_START is the starting value of epsilon
-    # EPS_END is the final value of epsilon
-    # EPS_DECAY controls the rate of exponential decay of epsilon, higher means a slower decay
-    # TAU is the update rate of the target network
-    # LR is the learning rate of the ``AdamW`` optimizer
     BATCH_SIZE = 128
     GAMMA = 0.99
     EPS_START = 0.9
@@ -71,7 +60,6 @@ if __name__ == "__main__":
     n_actions = spec.action_spec.discrete_branches[0]
     state, _ = env.get_steps(behaviour_name)
     state = state.obs[0]
-    # n_observations = len(state)
     n_observations = spec.observation_specs[0].shape[0]
 
     if DUELING:
@@ -103,7 +91,6 @@ if __name__ == "__main__":
             print("Checkpoint: Saved weights to file")
         step_rewards = []
         step_losses = []
-        # Initialize the environment and get its state
         env.reset()
         decision_steps, terminal_steps = env.get_steps(behaviour_name)
         state = decision_steps.obs[0]
@@ -140,19 +127,12 @@ if __name__ == "__main__":
             else:
                 next_state = torch.tensor(observation, dtype=torch.float32, device=device)
 
-            # Store the transition in memory
             memory.push(state, action, next_state, reward)
-
-            # Move to the next state
             state = next_state
-
-            # Perform one step of the optimization (on the policy network)
             loss = optimize_model(memory, policy_net, target_net, optimizer, device, double=DOUBLE, BATCH_SIZE=BATCH_SIZE, GAMMA=GAMMA)
             if loss is not None:
                 step_losses.append(loss)
 
-            # Soft update of the target network's weights
-            # θ′ ← τ θ + (1 −τ )θ′
             target_net_state_dict = target_net.state_dict()
             policy_net_state_dict = policy_net.state_dict()
             for key in policy_net_state_dict:

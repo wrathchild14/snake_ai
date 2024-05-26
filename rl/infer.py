@@ -1,10 +1,7 @@
-import random
 import torch
 
 from mlagents_envs.environment import UnityEnvironment
 from mlagents_envs.base_env import ActionTuple
-
-import numpy as np
 
 from models import DQN, DuelingDQN
 
@@ -12,7 +9,7 @@ from models import DQN, DuelingDQN
 if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    env = UnityEnvironment(file_name="unity_builds/snake", seed=6, side_channels=[], no_graphics=False)
+    env = UnityEnvironment(file_name="unity_builds/snake", seed=0, side_channels=[], no_graphics=False)
     env.reset()
 
     behaviour_name = list(env.behavior_specs)[0]
@@ -21,12 +18,10 @@ if __name__ == "__main__":
     n_actions = spec.action_spec.discrete_branches[0]
     state, _ = env.get_steps(behaviour_name)
     state = state.obs[0]
-    # n_observations = len(state)
     n_observations = spec.observation_specs[0].shape[0]
 
     policy_net = DQN(n_observations, n_actions).to(device)
     # policy_net = DuelingDQN(n_observations, n_actions).to(device)
-    # policy_net.load_state_dict(torch.load('weights/large_observations/4k/policy_net.pth'))
     policy_net.load_state_dict(torch.load('weights/policy_net.pth'))
     for t in range(5):
         env.reset()
@@ -44,6 +39,7 @@ if __name__ == "__main__":
 
             decision_steps, terminal_steps = env.get_steps(behaviour_name)
             observation = decision_steps.obs[0]
+            print(observation)
             done = len(decision_steps) == 0
             terminated = len(terminal_steps) > 0
 

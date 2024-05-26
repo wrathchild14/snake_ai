@@ -1,4 +1,3 @@
-import mlagents
 from mlagents_envs.environment import UnityEnvironment
 
 env = UnityEnvironment(file_name="unity_builds/snake", seed=1, side_channels=[])
