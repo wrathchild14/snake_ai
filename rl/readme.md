@@ -67,3 +67,8 @@ typing_extensions==4.11.0
 urllib3==2.2.1
 Werkzeug==3.0.3
 ```
+
+# Usage
+
+- Build the game with unity to the folder `unity_builds`
+- Use the `train.py` or `smart_snake.ipynb` files to train
