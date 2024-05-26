@@ -50,7 +50,7 @@ if __name__ == "__main__":
     LR = 1e-4
 
     SAVE_WEIGHTS = True
-    LOAD_WEIGHTS = True
+    LOAD_WEIGHTS = False
     steps_done = 0
     STEPS = 250
     DOUBLE = False
@@ -62,7 +62,7 @@ if __name__ == "__main__":
     else:
         num_episodes = 50
 
-    env = UnityEnvironment(file_name="unity_builds/snake", seed=2, side_channels=[], no_graphics=not GRAPHICS)
+    env = UnityEnvironment(file_name="unity_builds/snake", seed=0, side_channels=[], no_graphics=not GRAPHICS)
     env.reset()
 
     behaviour_name = list(env.behavior_specs)[0]
@@ -109,7 +109,6 @@ if __name__ == "__main__":
         state = decision_steps.obs[0]
         state = torch.tensor(state, dtype=torch.float32, device=device)
         for t in range(STEPS):
-            # time.sleep(1)
             action = select_action(state)
             action_tuple = ActionTuple()
             action_tuple.add_discrete(action.cpu().numpy())
@@ -127,7 +126,7 @@ if __name__ == "__main__":
                 reward += terminal_steps.reward
             done = len(decision_steps) == 0
             terminated = len(terminal_steps) > 0
-            # print(observation, reward, done, terminated, action)
+
             assert len(reward) == state.shape[0] == action.shape[0]
 
             # if t % 50 == 0:

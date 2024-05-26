@@ -62,22 +62,24 @@ namespace Assets.Scripts.RL
             switch (action)
             {
                 case 0: // move up
-                    if (_gridMoveDirection.y != -1)
-                        _gridMoveDirection = new Vector2Int(0, 1);
+                    // if (_gridMoveDirection.y != -1)
+                    _gridMoveDirection = new Vector2Int(0, 1);
                     break;
                 case 1: // move down
-                    if (_gridMoveDirection.y != 1)
-                        _gridMoveDirection = new Vector2Int(0, -1);
+                    // if (_gridMoveDirection.y != 1)
+                    _gridMoveDirection = new Vector2Int(0, -1);
                     break;
                 case 2: // move left
-                    if (_gridMoveDirection.x != 1)
-                        _gridMoveDirection = new Vector2Int(-1, 0);
+                    // if (_gridMoveDirection.x != 1)
+                    _gridMoveDirection = new Vector2Int(-1, 0);
                     break;
                 case 3: // move right
-                    if (_gridMoveDirection.x != -1)
-                        _gridMoveDirection = new Vector2Int(1, 0);
+                    // if (_gridMoveDirection.x != -1)
+                    _gridMoveDirection = new Vector2Int(1, 0);
                     break;
             }
+
+           
         }
 
         public override void Heuristic(in ActionBuffers actionsOut)
@@ -99,33 +101,70 @@ namespace Assets.Scripts.RL
 
         public override void CollectObservations(VectorSensor sensor)
         {
-            Vector2 normalizedFoodPosition = (_levelGrid.GetFoodPosition() + new Vector2(_levelGrid.GetWidth(), _levelGrid.GetHeight())) / new Vector2(_levelGrid.GetWidth() * 2, _levelGrid.GetHeight() * 2);
-            sensor.AddObservation(normalizedFoodPosition);
-
-            Vector2 normalizedHeadPosition = (_gridPosition + new Vector2(_levelGrid.GetWidth(), _levelGrid.GetHeight())) / new Vector2(_levelGrid.GetWidth() * 2, _levelGrid.GetHeight() * 2);
+            Vector2 normalizedHeadPosition = (_gridPosition + new Vector2(_levelGrid.GetWidth(), _levelGrid.GetHeight())) / new Vector2((float)_levelGrid.GetWidth() * 2, (float)_levelGrid.GetHeight() * 2);
             sensor.AddObservation(normalizedHeadPosition);
 
-            float averageSizeGrid = _levelGrid.GetWidth() + _levelGrid.GetHeight();
+            Vector2 normalizedFoodPosition = (_levelGrid.GetFoodPosition() + new Vector2(_levelGrid.GetWidth(), _levelGrid.GetHeight())) / new Vector2((float)_levelGrid.GetWidth() * 2, (float)_levelGrid.GetHeight() * 2);
+            sensor.AddObservation(normalizedFoodPosition);
 
-            float distanceToObstacleUp = DistanceToObstacleInDirection(new Vector2Int(0, 1));
-            // float normalizedDistanceToObstacleUp = (distanceToObstacleUp + averageSizeGrid) / (_levelGrid.GetWidth() * 2 + _levelGrid.GetHeight() * 2);
-            float normalizedDistanceToObstacleUp = distanceToObstacleUp / averageSizeGrid;
-            sensor.AddObservation(normalizedDistanceToObstacleUp);
+            sensor.AddObservation(IsObstacleInDirection(new Vector2Int(0, 1)));  // Up
+            sensor.AddObservation(IsObstacleInDirection(new Vector2Int(0, -1))); // Down
+            sensor.AddObservation(IsObstacleInDirection(new Vector2Int(-1, 0))); // Left
+            sensor.AddObservation(IsObstacleInDirection(new Vector2Int(1, 0)));  // Right
 
-            float distanceToObstacleDown = DistanceToObstacleInDirection(new Vector2Int(0, -1));
-            // float normalizedDistanceToObstacleDown = (distanceToObstacleDown + averageSizeGrid) / (_levelGrid.GetWidth() * 2 + _levelGrid.GetHeight() * 2);
-            float normalizedDistanceToObstacleDown = distanceToObstacleDown / averageSizeGrid;
-            sensor.AddObservation(normalizedDistanceToObstacleDown);
+            // foreach (var bodyPart in _snakeBodyTransformList)
+            // {
+            //     Vector2 normalizedBodyPosition = (Vector2Int.RoundToInt(new Vector2(bodyPart.position.x, bodyPart.position.y)) + new Vector2(_levelGrid.GetWidth(), _levelGrid.GetHeight())) / new Vector2((float)_levelGrid.GetWidth() * 2, (float)_levelGrid.GetHeight() * 2);
+            //     sensor.AddObservation(normalizedBodyPosition);
+            // }
 
-            float distanceToObstacleLeft = DistanceToObstacleInDirection(new Vector2Int(-1, 0));
-            // float normalizedDistanceToObstacleLeft = (distanceToObstacleLeft + averageSizeGrid) / (_levelGrid.GetWidth() * 2 + _levelGrid.GetHeight() * 2);
-            float normalizedDistanceToObstacleLeft = distanceToObstacleLeft / averageSizeGrid;
-            sensor.AddObservation(normalizedDistanceToObstacleLeft);
 
-            float distanceToObstacleRight = DistanceToObstacleInDirection(new Vector2Int(1, 0));
-            // float normalizedDistanceToObstacleRight = (distanceToObstacleRight + averageSizeGrid) / (_levelGrid.GetWidth() * 2 + _levelGrid.GetHeight() * 2);
-            float normalizedDistanceToObstacleRight = distanceToObstacleRight / averageSizeGrid;
-            sensor.AddObservation(normalizedDistanceToObstacleRight);
+
+            // float averageSizeGrid = _levelGrid.GetWidth() + _levelGrid.GetHeight();
+
+            // float distanceToObstacleUp = DistanceToObstacleInDirection(new Vector2Int(0, 1));
+            // // float normalizedDistanceToObstacleUp = (distanceToObstacleUp + averageSizeGrid) / (_levelGrid.GetWidth() * 2 + _levelGrid.GetHeight() * 2);
+            // // float normalizedDistanceToObstacleUp = distanceToObstacleUp / averageSizeGrid;
+            // sensor.AddObservation(distanceToObstacleUp);
+
+            // float distanceToObstacleDown = DistanceToObstacleInDirection(new Vector2Int(0, -1));
+            // // float normalizedDistanceToObstacleDown = (distanceToObstacleDown + averageSizeGrid) / (_levelGrid.GetWidth() * 2 + _levelGrid.GetHeight() * 2);
+            // // float normalizedDistanceToObstacleDown = distanceToObstacleDown / averageSizeGrid;
+            // sensor.AddObservation(distanceToObstacleDown);
+
+            // float distanceToObstacleLeft = DistanceToObstacleInDirection(new Vector2Int(-1, 0));
+            // // float normalizedDistanceToObstacleLeft = (distanceToObstacleLeft + averageSizeGrid) / (_levelGrid.GetWidth() * 2 + _levelGrid.GetHeight() * 2);
+            // // float normalizedDistanceToObstacleLeft = distanceToObstacleLeft / averageSizeGrid;
+            // sensor.AddObservation(distanceToObstacleLeft);
+
+            // float distanceToObstacleRight = DistanceToObstacleInDirection(new Vector2Int(1, 0));
+            // // float normalizedDistanceToObstacleRight = (distanceToObstacleRight + averageSizeGrid) / (_levelGrid.GetWidth() * 2 + _levelGrid.GetHeight() * 2);
+            // // float normalizedDistanceToObstacleRight = distanceToObstacleRight / averageSizeGrid;
+            // sensor.AddObservation(distanceToObstacleRight);
+
+
+        }
+
+        private bool IsObstacleInDirection(Vector2Int direction)
+        {
+            Vector2Int nextPosition = _gridPosition + direction;
+
+            // wall
+            if (nextPosition.x < -_levelGrid.GetWidth() || nextPosition.y < -_levelGrid.GetHeight() || nextPosition.x > _levelGrid.GetWidth() || nextPosition.y > _levelGrid.GetHeight())
+            {
+                return true;
+            }
+
+            // snake body
+            foreach (Transform bodyPart in _snakeBodyTransformList)
+            {
+                if (Vector2Int.RoundToInt(bodyPart.position) == nextPosition)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private float DistanceToObstacleInDirection(Vector2Int direction)
@@ -212,8 +251,19 @@ namespace Assets.Scripts.RL
         }
 
         private void UpdateMovement() {
-            AddReward(0.01f);
+            float oldDistance = Vector2.Distance(_gridPosition, _levelGrid.GetFoodPosition());
+
             _gridPosition += _gridMoveDirection;
+
+            float newDistance = Vector2.Distance(_gridPosition, _levelGrid.GetFoodPosition());
+            if (newDistance < oldDistance)
+            {
+                AddReward(0.1f);
+            }
+            else
+            {
+                AddReward(-0.1f);
+            }
 
             if (_gridPosition.x < -_levelGrid.GetWidth() || _gridPosition.x > _levelGrid.GetWidth() ||
                 _gridPosition.y < -_levelGrid.GetHeight() || _gridPosition.y > _levelGrid.GetHeight())
