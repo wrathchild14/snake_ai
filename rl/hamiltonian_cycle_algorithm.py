@@ -3,11 +3,18 @@
 # Rok Nikolič 2024
 
 from random import choice
+import json
 
 LEFT = 0
 UP = 1
 RIGHT = 2
 DOWN = 3
+
+
+def write_cycle_to_disc(cycle_to_write):
+    dictionary = {"cycle": cycle_to_write}
+    with open("ham_cycle.json", "w") as file:
+        json.dump(dictionary, file)
 
 
 def generate_valid_prims_edges(visited, rows, columns):
@@ -182,13 +189,14 @@ def generate_hamiltonian_path(directions):
     return hamiltonian_path[:index_of_second_00 + 2]
 
 
-def hamiltonian_cycle_for_grid(n=4, m=4):
+def hamiltonian_cycle_for_grid(n, m, write_to_disc=False):
     """
     Generates a hamiltonian cycle for a grid of a size (rows, columns) by using Prims algorithm to find
     a minimum span tree of half the size and then walk it to create the cycle.
     Rows and columns have to be divisible by 2, if not they will be rounded down
     :param n: number of rows
     :param m: number of columns
+    :param write_to_disc: flag to write the cycle to disc
     :return: hamiltonian cycle represented by a path of (y, x) coordinate pairs
     """
     if n < 4 or m < 4:
@@ -198,10 +206,13 @@ def hamiltonian_cycle_for_grid(n=4, m=4):
 
     min_spanning_tree = prims_algorithm_for_grid(rows, columns)
     mst_path, directions = traverse_grid(min_spanning_tree)
-    hamiltonian_path = generate_hamiltonian_path(directions)
-    return hamiltonian_path
+    hamiltonian_cycle = generate_hamiltonian_path(directions)
+    if write_to_disc:
+        write_cycle_to_disc(hamiltonian_cycle)
+
+    return hamiltonian_cycle
 
 
 if __name__ == '__main__':
-    cycle = hamiltonian_cycle_for_grid(4, 4)
+    cycle = hamiltonian_cycle_for_grid(8, 8, True)
     print(cycle)
