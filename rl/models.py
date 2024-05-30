@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import random
 
 from collections import namedtuple, deque
@@ -60,18 +61,17 @@ class ReplayMemory(object):
 class DQN(nn.Module):
     def __init__(self, num_observations, num_actions):
         super(DQN, self).__init__()
-        self.layers = nn.Sequential(
-            nn.Linear(num_observations, 64),
-            nn.ReLU(),
-            nn.Linear(64, 128),
-            nn.ReLU(),
-            nn.Linear(128, 64),
-            nn.ReLU(),
-            nn.Linear(64, num_actions)
-        )
+        self.layer1 = nn.Linear(num_observations, 64)
+        self.layer2 = nn.Linear(64, 128)
+        self.layer3 = nn.Linear(128, 64)
+        self.layer4 = nn.Linear(64, num_actions)
 
     def forward(self, x):
-        return self.layers(x)
+        x = F.relu(self.layer1(x))
+        x = F.relu(self.layer2(x))
+        x = F.relu(self.layer3(x))
+        return self.layer4(x)
+
 
 class DuelingDQN(nn.Module):
 
