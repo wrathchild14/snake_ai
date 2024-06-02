@@ -22,7 +22,7 @@ if __name__ == "__main__":
 
     policy_net = DQN(n_observations, n_actions).to(device)
     # policy_net = DuelingDQN(n_observations, n_actions).to(device)
-    policy_net.load_state_dict(torch.load('models/ddqnplus/policy_net.pth'))
+    policy_net.load_state_dict(torch.load('trained_models/ddqnplus/policy_net.pth'))
     for t in range(5):
         env.reset()
         decision_steps, terminal_steps = env.get_steps(behaviour_name)
