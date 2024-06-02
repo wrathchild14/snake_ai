@@ -70,5 +70,5 @@ Werkzeug==3.0.3
 
 # Usage
 
-- Build the game with unity to the folder `unity_builds`
-- Use the `train.py` or `smart_snake.ipynb` files to train
+- Build the scene `SmartScene` with unity to the folder `unity_builds`
+- Use the `train.py` or `smart_snake.ipynb` files to train, or use the `infer.py`, `record.ipynb` with the trained weights for inference
